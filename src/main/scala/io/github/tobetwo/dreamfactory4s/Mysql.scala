@@ -3,16 +3,17 @@ package io.github.tobetwo.dreamfactory4s
 import java.util
 
 import io.github.tobetwo.implicits._
-import io.github.tobetwo.rest4s.{AbstractRest, K, Rest}
+import io.github.tobetwo.rest4s.{AbstractRest, K}
 import org.apache.commons.lang.StringEscapeUtils
 
 object DF extends AbstractRest[Mysql] {
-  def mysql = new Mysql().service(DFConfig.DF_MYSQL_SERVICE_NAME.toString)
+  def mysql = new Mysql().service(DFConfig.DF_MYSQL_SERVICE_NAME.toString).query("limit", "10")
 }
 private[dreamfactory4s] class DreamFactory extends AbstractRest[DreamFactory]
 private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   implicit def _2s(a: Any) = a.toString
-  override def resource(r: String*): Mysql = super.resource("_table/" + r)
+
+  override def resource(r: String*): Mysql = super.resource("_table" :: r.toList mkString "/")
 
   def table(table: String) = resource(table)
 
@@ -21,7 +22,7 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   def where(exp: LogicExpression) = {
     val newFilter = getOrElse("filter", EmptyExpression) & exp
     val map = Map("filter" -> newFilter)
-    copy(map.asInstanceOf[Map[Any, Any]]).copyByNewMap("query")(map.view.mapValues(_.flatten).toMap)
+    copy(map.asInstanceOf[Map[Any, Any]]).copyByNewMap("query")(map.mapValues(_.flatten))
   }
 
   def orderBy(order: Array[String]): Mysql = orderBy(order: _*)
@@ -57,8 +58,8 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   def list: ListResult = {
     val response = query("include_count", true).getJson
     val result = if (response.isNotError) {
-      val list = response.body("resource").asInstanceOf[List[Map[_, _]]]
-        .map(_.map[String, String]{case (k, v) => (k.toLowerCase.camelCase, v)})
+      val list = response.body("resource").asInstanceOf[List[Map[String, String]]]
+        .map(_.map { case (k, v) => (k.toLowerCase.camelCase, v) })
 
       val meta = response.body("meta").asInstanceOf[Map[String, BigInt]]
 
@@ -81,7 +82,7 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
 
 
   private def deCamalCasedJson(entities: Map[String, String]*) =
-    entities.map(_.map[String, String]{case (k, v) => k.deCamelCase + "_" -> v}).toJson
+    entities.map(_.map { case (k, v) => k.deCamelCase + "_" -> v }).toJson
 
   def save(entities: Map[String, String]*)= payload("resource", deCamalCasedJson(entities: _*)).putJson
 
