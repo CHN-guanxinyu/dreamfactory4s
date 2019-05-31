@@ -1,6 +1,6 @@
-name := "dreamfactory4s_" + Version.scala
+name := "dreamfactory4s"
 
-version := "1.0.0"
+version := "1.0-SNAPSHOT"
 
 scalaVersion := Version.scala
 
