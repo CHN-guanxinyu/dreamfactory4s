@@ -22,4 +22,9 @@ class DFTest extends FunSuite{
     assert(DF.cache delete "hello")
     assert(!(DF.cache get "hello" exists))
   }
+
+  test("test mysql") {
+    import io.github.tobetwo.dreamfactory4s.implicits._
+    println(DF.mysql table "v_user_all" where ($"id" === 1 | $"roleName" ~ "测试") limit 10 list)
+  }
 }
