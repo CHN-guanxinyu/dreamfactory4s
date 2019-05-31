@@ -6,10 +6,7 @@ import io.github.tobetwo.implicits._
 import io.github.tobetwo.rest4s.{AbstractRest, K}
 import org.apache.commons.lang.StringEscapeUtils
 
-object DF extends AbstractRest[Mysql] {
-  def mysql = new Mysql().service(DFConfig.DF_MYSQL_SERVICE_NAME.toString).query("limit", "10")
-}
-private[dreamfactory4s] class DreamFactory extends AbstractRest[DreamFactory]
+
 private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   implicit def _2s(a: Any) = a.toString
 
@@ -17,20 +14,21 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
 
   def table(table: String) = resource(table)
 
-  def select(select: String*): Mysql = query("fields", select map (_.deCamelCase + "_") mkString ",")
+  def select(select: String*): Mysql = param("fields", select map (_.deCamelCase + "_") mkString ",")
 
   def where(exp: LogicExpression) = {
     val newFilter = getOrElse("filter", EmptyExpression) & exp
     val map = Map("filter" -> newFilter)
-    copy(map.asInstanceOf[Map[Any, Any]]).copyByNewMap("query")(map.mapValues(_.flatten))
+    copy(map.asInstanceOf[Map[Any, Any]]).copyByNewMap(K.param)(map.mapValues(_.flatten))
   }
 
   def orderBy(order: Array[String]): Mysql = orderBy(order: _*)
-  def orderBy(order: String*): Mysql = query("order", order map (_ deCamelCase) mkString ",")
 
-  def offset(offset: Int) = query("offset", offset)
+  def orderBy(order: String*): Mysql = param("order", order map (_ deCamelCase) mkString ",")
 
-  def limit(limit: Int) = query("limit", limit)
+  def offset(offset: Int) = param("offset", offset)
+
+  def limit(limit: Int) = param("limit", limit)
 
   private def getError(result: ValueMap) = StringEscapeUtils unescapeHtml
     result("error").asInstanceOf[Map[String, String]].getOrElse("message", "")
@@ -43,7 +41,7 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
       if (response.isNotError) EntityResult() data response.body
       else EntityResult() success false code response.code errorMsg getError(response.body)
     }
-    else if (getQueryVar("filter").nonEmpty) {
+    else if (getParameter("filter").nonEmpty) {
       val r = limit(1).list
       if(r.success && r.count > 0) EntityResult() data r.get(0)
       else EntityResult()
@@ -56,7 +54,7 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   def listAll = limit(-1).list
 
   def list: ListResult = {
-    val response = query("include_count", true).getJson
+    val response = param("include_count", true).getJson
     val result = if (response.isNotError) {
       val list = response.body("resource").asInstanceOf[List[Map[String, String]]]
         .map(_.map { case (k, v) => (k.toLowerCase.camelCase, v) })
@@ -69,7 +67,7 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   }
 
   def count = {
-    val response = query("count_only", true).send()(_.asString)
+    val response = param("count_only", true).send()(_.asString)
     if (response.isNotError) response.body.toInt
     else 0
   }
@@ -84,12 +82,12 @@ private[dreamfactory4s] class Mysql extends AbstractRest[Mysql] {
   private def deCamalCasedJson(entities: Map[String, String]*) =
     entities.map(_.map { case (k, v) => k.deCamelCase + "_" -> v }).toJson
 
-  def save(entities: Map[String, String]*)= payload("resource", deCamalCasedJson(entities: _*)).putJson
+  def save(entities: Map[String, String]*) = param("resource", deCamalCasedJson(entities: _*)).putJson
 
   def remove: Any = remove()
 
   def remove(entities: Map[String, String]*): Any =
-    payload("resource", deCamalCasedJson(entities: _*)).deleteJson
+    param("resource", deCamalCasedJson(entities: _*)).deleteJson
 
 }
 
