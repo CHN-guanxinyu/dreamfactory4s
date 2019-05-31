@@ -7,7 +7,7 @@ object Dependencies {
 object Version{
   val scala = "2.11.8"
   val scala_test = "3.0.0"
-  val rest4s = "1.1-SNAPSHOT"
+  val rest4s = "1.1.2"
 }
 
 object Lib{
