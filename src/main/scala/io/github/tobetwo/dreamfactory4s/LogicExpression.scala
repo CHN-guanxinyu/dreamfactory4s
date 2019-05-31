@@ -38,9 +38,9 @@ case class Col(field: String) extends Expression(field.deCamelCase + "_") {
 
   def *~(o: String) = endWith(o)
 
-  def isNull = "is" -> "null" e
+  def isNull = "is null" -> "" e
 
-  def notNull = "is not" -> "null" e
+  def notNull = "is not null" -> "" e
 
   def inRange(start: Any, end: Any) = >=(start) & <=(end)
 
@@ -55,7 +55,7 @@ case class Col(field: String) extends Expression(field.deCamelCase + "_") {
   private implicit class ExpressionBuilder(tuple: (String, Any)) {
     def e = {
       val right = tuple._2 match {
-        case o: String => o.wrap
+        case o: String => if (o.nonEmpty) o.wrap else o
         case o: Int => o.toString
         case Col(f) => f
         case o: Array[String] => s"(${o.map(_.wrap) mkString ","})"
